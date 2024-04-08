@@ -28,7 +28,7 @@ describe("deopp-contract", () => {
     );
 
     const [tokenPool] = PublicKey.findProgramAddressSync(
-      [provider.wallet.publicKey.toBytes(), new PublicKey(tokenMint).toBytes()],
+      [new PublicKey(tokenMint).toBytes()],
       program.programId
     );
 
@@ -64,7 +64,7 @@ describe("deopp-contract", () => {
     );
 
     const [tokenPool] = PublicKey.findProgramAddressSync(
-      [provider.wallet.publicKey.toBytes(), new PublicKey(tokenMint).toBytes()],
+      [new PublicKey(tokenMint).toBytes()],
       program.programId
     );
 

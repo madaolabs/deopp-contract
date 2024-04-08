@@ -1,7 +1,7 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token::{self, Mint, Token, TokenAccount, Transfer};
 
-declare_id!("BT63sTcG9tPNf2mxgzGaohQwPF8rC4mWSHAgxtW5QZDC");
+declare_id!("5HsDyhfkCMjy3Kebufc2Fc7Zr5LhSZzh9sQP5wVMnriG");
 
 #[program]
 pub mod deopp_contract {
@@ -52,6 +52,11 @@ pub mod deopp_contract {
         require_eq!(is_receiver, true);
         require_eq!(is_received, false);
 
+        let (_pool, bump) = Pubkey::find_program_address(
+            &[&ctx.accounts.token_mint.key().to_bytes()],
+            ctx.program_id,
+        );
+
         let cpi_accounts = Transfer {
             from: ctx.accounts.token_pool.to_account_info(),
             to: ctx.accounts.to_account.to_account_info(),
@@ -59,7 +64,12 @@ pub mod deopp_contract {
         };
 
         let cpi_program = ctx.accounts.token_program.to_account_info();
-        let cpi_ctx = CpiContext::new(cpi_program, cpi_accounts);
+        let binding = Box([&[
+            ctx.accounts.payer.key.as_ref(),
+            ctx.accounts.token_mint.key().as_ref(),
+            &[bump],
+        ]]) as [&[&[u8]]];
+        let cpi_ctx = CpiContext::new_with_signer(cpi_program, cpi_accounts, &binding);
 
         let _ = token::transfer(cpi_ctx, receive_amount);
 
@@ -85,7 +95,7 @@ pub struct CreateGiveaway<'info> {
     payer: Signer<'info>,
     #[account(mut, token::mint = token_mint)]
     from_account: Account<'info, TokenAccount>,
-    #[account(init_if_needed, payer = payer, token::mint = token_mint, token::authority = token_pool, seeds = [&payer.key().to_bytes(), &token_mint.key().to_bytes()], bump)]
+    #[account(init_if_needed, payer = payer, token::mint = token_mint, token::authority = token_pool, seeds = [&token_mint.key().to_bytes()], bump)]
     token_pool: Account<'info, TokenAccount>,
     #[account(init_if_needed, payer = payer, space = 8 + usize::try_from(args.receiver.len()).unwrap() * 32 * 2 + 8, seeds = [&args.giveaway_id.clone()], bump)]
     giveaway_pool: Account<'info, GiveawayPool>,
@@ -108,7 +118,7 @@ pub struct ReceiveGiveawayAccount<'info> {
     payer: Signer<'info>,
     #[account(mut, seeds = [&giveaway_id.clone()], bump)]
     giveaway_pool: Account<'info, GiveawayPool>,
-    #[account(mut, token::mint = token_mint, token::authority = token_pool, seeds = [&payer.key().to_bytes(), &token_mint.key().to_bytes()], bump)]
+    #[account(mut, token::mint = token_mint, token::authority = token_pool, seeds = [&token_mint.key().to_bytes()], bump)]
     token_pool: Account<'info, TokenAccount>,
     #[account(mut)]
     to_account: Account<'info, TokenAccount>,
