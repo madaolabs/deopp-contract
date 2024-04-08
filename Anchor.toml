@@ -3,16 +3,15 @@
 [features]
 seeds = false
 skip-lint = false
-init-if-needed = true
 
-[programs.localnet]
-deopp_contract = "367SGmqLTxrfkicD6HhfJhVunmrhazwjAUpLH5mzi46F"
+[programs.devnet]
+deopp_contract = "BT63sTcG9tPNf2mxgzGaohQwPF8rC4mWSHAgxtW5QZDC"
 
 [registry]
 url = "https://api.apr.dev"
 
 [provider]
-cluster = "Localnet"
+cluster = "devnet"
 wallet = "/Users/tuotu/.config/solana/id.json"
 
 [scripts]

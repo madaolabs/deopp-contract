@@ -1,7 +1,7 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token::{self, Mint, Token, TokenAccount, Transfer};
 
-declare_id!("5t9e4i4E33pBR8uoWu2rqznVAhvwkhKzkixDMhQQTyQw");
+declare_id!("BT63sTcG9tPNf2mxgzGaohQwPF8rC4mWSHAgxtW5QZDC");
 
 #[program]
 pub mod deopp_contract {
@@ -11,13 +11,17 @@ pub mod deopp_contract {
         ctx.accounts.giveaway_pool.receiver = args.receiver.clone();
         ctx.accounts.giveaway_pool.receive_records = Vec::new();
         ctx.accounts.giveaway_pool.amount = args.amount;
-        let transfer_accounts = Transfer {
+        let cpi_accounts = Transfer {
             from: ctx.accounts.from_account.to_account_info(),
             to: ctx.accounts.token_pool.to_account_info(),
             authority: ctx.accounts.payer.to_account_info(),
         };
 
-        token::transfer(transfer_accounts, args.amount);
+        let cpi_program = ctx.accounts.token_program.to_account_info();
+        let cpi_ctx = CpiContext::new(cpi_program, cpi_accounts);
+
+        let receiver_count: u64 = args.receiver.len() as u64;
+        let _ = token::transfer(cpi_ctx, receiver_count * args.amount);
 
         return Ok(());
     }
@@ -40,17 +44,14 @@ pub struct CreateGiveaway<'info> {
     system_program: Program<'info, System>,
     token_program: Program<'info, Token>,
     rent: Sysvar<'info, Rent>,
+    token_mint: Account<'info, Mint>,
     #[account(mut)]
     payer: Signer<'info>,
-    /// CHECK:
     #[account(mut, token::mint = token_mint)]
     from_account: Account<'info, TokenAccount>,
-    /// CHECK:
-    #[account(init, payer = payer, token::mint = token_mint, token::authority = token_pool, seeds = [&payer.key().to_bytes(), &token_mint.key().to_bytes()], bump)]
+    #[account(init_if_needed, payer = payer, token::mint = token_mint, token::authority = token_pool, seeds = [&payer.key().to_bytes(), &token_mint.key().to_bytes()], bump)]
     token_pool: Account<'info, TokenAccount>,
-    token_mint: Account<'info, Mint>,
-
-    #[account(init, payer = payer, space = 8 + usize::try_from(args.receiver.len()).unwrap() * 32, seeds = [&args.giveaway_id.clone()], bump)]
+    #[account(init_if_needed, payer = payer, space = 8 + usize::try_from(args.receiver.len()).unwrap() * 32, seeds = [&args.giveaway_id.clone()], bump)]
     giveaway_pool: Account<'info, GiveawayPool>,
 }
 
