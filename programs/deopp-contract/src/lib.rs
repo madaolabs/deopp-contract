@@ -64,12 +64,9 @@ pub mod deopp_contract {
         };
 
         let cpi_program = ctx.accounts.token_program.to_account_info();
-        let binding = Box([&[
-            ctx.accounts.payer.key.as_ref(),
-            ctx.accounts.token_mint.key().as_ref(),
-            &[bump],
-        ]]) as [&[&[u8]]];
-        let cpi_ctx = CpiContext::new_with_signer(cpi_program, cpi_accounts, &binding);
+        let binding = ctx.accounts.token_mint.key();
+        let binding: &[&[&[u8]]] = &[&[binding.as_ref(), &[bump]]];
+        let cpi_ctx = CpiContext::new_with_signer(cpi_program, cpi_accounts, binding);
 
         let _ = token::transfer(cpi_ctx, receive_amount);
 
