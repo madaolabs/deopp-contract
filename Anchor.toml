@@ -3,6 +3,7 @@
 [features]
 seeds = false
 skip-lint = false
+init-if-needed = true
 
 [programs.localnet]
 deopp_contract = "367SGmqLTxrfkicD6HhfJhVunmrhazwjAUpLH5mzi46F"
