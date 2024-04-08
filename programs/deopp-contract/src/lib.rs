@@ -5,6 +5,7 @@ declare_id!("BT63sTcG9tPNf2mxgzGaohQwPF8rC4mWSHAgxtW5QZDC");
 
 #[program]
 pub mod deopp_contract {
+
     use super::*;
 
     pub fn create_giveaway(ctx: Context<CreateGiveaway>, args: CreateGiveawayARG) -> Result<()> {
@@ -26,9 +27,44 @@ pub mod deopp_contract {
         return Ok(());
     }
 
-    // pub fn receive_giveaway(ctx: Context) -> Result<()> {
-    //     return Ok(());
-    // }
+    pub fn receive_giveaway(
+        ctx: Context<ReceiveGiveawayAccount>,
+        _giveaway_id: [u8; 20],
+    ) -> Result<()> {
+        let receive_amount = ctx.accounts.giveaway_pool.amount;
+        let receive_records = &ctx.accounts.giveaway_pool.receive_records;
+        let receiver = &ctx.accounts.giveaway_pool.receiver;
+        let payer = ctx.accounts.payer.key();
+        let mut is_receiver = false;
+        for receive in receiver.iter() {
+            if payer.eq(receive) {
+                is_receiver = true;
+            }
+        }
+
+        let mut is_received = false;
+        for receive in receive_records.iter() {
+            if payer.eq(receive) {
+                is_received = true;
+            }
+        }
+
+        require_eq!(is_receiver, true);
+        require_eq!(is_received, false);
+
+        let cpi_accounts = Transfer {
+            from: ctx.accounts.token_pool.to_account_info(),
+            to: ctx.accounts.to_account.to_account_info(),
+            authority: ctx.accounts.token_pool.to_account_info(),
+        };
+
+        let cpi_program = ctx.accounts.token_program.to_account_info();
+        let cpi_ctx = CpiContext::new(cpi_program, cpi_accounts);
+
+        let _ = token::transfer(cpi_ctx, receive_amount);
+
+        return Ok(());
+    }
 }
 
 #[derive(AnchorSerialize, AnchorDeserialize, Clone)]
@@ -51,7 +87,7 @@ pub struct CreateGiveaway<'info> {
     from_account: Account<'info, TokenAccount>,
     #[account(init_if_needed, payer = payer, token::mint = token_mint, token::authority = token_pool, seeds = [&payer.key().to_bytes(), &token_mint.key().to_bytes()], bump)]
     token_pool: Account<'info, TokenAccount>,
-    #[account(init_if_needed, payer = payer, space = 8 + usize::try_from(args.receiver.len()).unwrap() * 32, seeds = [&args.giveaway_id.clone()], bump)]
+    #[account(init_if_needed, payer = payer, space = 8 + usize::try_from(args.receiver.len()).unwrap() * 32 * 2 + 8, seeds = [&args.giveaway_id.clone()], bump)]
     giveaway_pool: Account<'info, GiveawayPool>,
 }
 
@@ -63,24 +99,15 @@ pub struct GiveawayPool {
     amount: u64,
 }
 
-#[derive(AnchorSerialize, AnchorDeserialize, Clone)]
-pub struct ReceiveNonPutGiveawayARG {
-    giveaway_id: [u8; 20], // 红包ID
-    amount: u128,
-    timestamp: u64,
-    signature: [u8; 65],
-}
-
 #[derive(Accounts)]
-#[instruction(args: ReceiveNonPutGiveawayARG)]
-pub struct ReceiveNonPutGiveawayAccount<'info> {
+#[instruction(giveaway_id: [u8; 20])]
+pub struct ReceiveGiveawayAccount<'info> {
     system_program: Program<'info, System>,
     token_program: Program<'info, Token>,
     #[account(mut)]
     payer: Signer<'info>,
-    #[account(mut, seeds = [&args.giveaway_id.clone()], bump)]
+    #[account(mut, seeds = [&giveaway_id.clone()], bump)]
     giveaway_pool: Account<'info, GiveawayPool>,
-    /// CHECK:
     #[account(mut, token::mint = token_mint, token::authority = token_pool, seeds = [&payer.key().to_bytes(), &token_mint.key().to_bytes()], bump)]
     token_pool: Account<'info, TokenAccount>,
     #[account(mut)]

@@ -11,7 +11,7 @@ deopp_contract = "BT63sTcG9tPNf2mxgzGaohQwPF8rC4mWSHAgxtW5QZDC"
 url = "https://api.apr.dev"
 
 [provider]
-cluster = "devnet"
+cluster = "http://localhost:8899"
 wallet = "/Users/tuotu/.config/solana/id.json"
 
 [scripts]

@@ -13,17 +13,18 @@ describe("deopp-contract", () => {
   anchor.setProvider(provider);
 
   const program = anchor.workspace.DeoppContract as Program<DeoppContract>;
+  const tokenMint = new PublicKey(
+    "2f4ygn6Qtqd7TN8zEYjNPEhRAo4SMDycBxYQ1fRbwvZ5"
+  );
+  const giveawayId = ethers.Wallet.createRandom().address;
+  console.log("giveawayId==>", giveawayId);
 
   it("createGiveaway", async () => {
     // Add your test here.
-    const giveawayId = ethers.Wallet.createRandom().address;
 
     const [giveaway_pool] = PublicKey.findProgramAddressSync(
       [ethers.toBeArray(giveawayId)],
       program.programId
-    );
-    const tokenMint = new PublicKey(
-      "HACxPsSXREaQzrcaVamHj4eK58BuMEZxfATk188VcLzb"
     );
 
     const [tokenPool] = PublicKey.findProgramAddressSync(
@@ -49,6 +50,37 @@ describe("deopp-contract", () => {
         payer: provider.wallet.publicKey,
         giveawayPool: giveaway_pool,
         fromAccount,
+        tokenMint,
+        tokenPool,
+      })
+      .rpc();
+    console.log("Your transaction signature", tx);
+  });
+
+  it("receiveGiveaway", async () => {
+    const [giveaway_pool] = PublicKey.findProgramAddressSync(
+      [ethers.toBeArray(giveawayId)],
+      program.programId
+    );
+
+    const [tokenPool] = PublicKey.findProgramAddressSync(
+      [provider.wallet.publicKey.toBytes(), new PublicKey(tokenMint).toBytes()],
+      program.programId
+    );
+
+    const toAccount = getAssociatedTokenAddressSync(
+      tokenMint,
+      provider.wallet.publicKey
+    );
+
+    const tx = await program.methods
+      .receiveGiveaway(Array.from(ethers.toBeArray(giveawayId)))
+      .accounts({
+        systemProgram: SystemProgram.programId,
+        tokenProgram: TOKEN_PROGRAM_ID,
+        payer: provider.wallet.publicKey,
+        giveawayPool: giveaway_pool,
+        toAccount,
         tokenMint,
         tokenPool,
       })
